@@ -1,4 +1,5 @@
 require 'gooddata'
+require '../datawarehouse/datawarehouse.rb'
 
 module GoodData
   module Bricks
@@ -14,7 +15,7 @@ module GoodData
 
         bucket = s3.buckets[bucket_name]
         # download all files in the given folder
-        # TODO: chytristika
+        # TODO: chytristika - last load
 
         # make temporary folder
         temp_dir = Dir.mktmpdir
@@ -32,19 +33,48 @@ module GoodData
           end
         end
         params['data_dir'] = temp_dir
-        params
+        puts "Data downloaded to #{temp_dir}"
+        @app.call(params)
       end
     end
     class ADSCreateTablesMiddleware < Bricks::Middleware
       def call(params)
-      end
-    end
-    class ADSLoadDataMiddleware < Bricks::Middleware
-      def call(params)
+        config = params['config']
+        data_dir = params['data_dir']
+        Dir.glob(File.join(data_dir, "*")).each do |csv_file|
+          # for each csv create a "temporary" table in ADS,
+
+
+          table_name = File.basename(csv_file).split('.')[0].gsub(/[\s"-]/,'')
+          temp_table_name = "temp#{rand(100000)}_#{table_name}"
+
+          dwh = Datawarehouse.new(config['ads_username'], config['ads_password'], config['ads_instance_id'])
+
+          # create the temp table
+          cols = dwh.create_table_from_csv_header(temp_table_name, csv_file)
+
+          if cols.empty?
+            puts "#{csv_file} is empty, skipping..."
+            next
+          end
+
+          # load the data there
+          dwh.load_data_from_csv(temp_table_name, csv_file, :columns => cols)
+
+          # drop the current table
+          dwh.drop_table(table_name, :skip_if_exists => true)
+
+          # rename the temporary to the right name
+          dwh.rename_table(temp_table_name, table_name)
+
+        end
+        @app.call(params)
       end
     end
     class ExecuteBrick
       def call(params)
+        puts 'hhah'
+
       end
     end
   end

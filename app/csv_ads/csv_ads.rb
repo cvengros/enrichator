@@ -1,5 +1,5 @@
 require 'gooddata'
-require '../datawarehouse/datawarehouse.rb'
+require 'gooddata_datawarehouse'
 
 module GoodData
   module Bricks
@@ -37,7 +37,7 @@ module GoodData
         @app.call(params)
       end
     end
-    class ADSCreateTablesMiddleware < Bricks::Middleware
+    class ADSLoadDataMiddleware < Bricks::Middleware
       def call(params)
         config = params['config']
         data_dir = params['data_dir']
@@ -48,7 +48,7 @@ module GoodData
           table_name = File.basename(csv_file).split('.')[0].gsub(/[\s"-]/,'')
           temp_table_name = "temp#{rand(100000)}_#{table_name}"
 
-          dwh = Datawarehouse.new(config['ads_username'], config['ads_password'], config['ads_instance_id'])
+          dwh = GoodData::Datawarehouse.new(config['ads_username'], config['ads_password'], config['ads_instance_id'])
 
           # create the temp table
           cols = dwh.create_table_from_csv_header(temp_table_name, csv_file)

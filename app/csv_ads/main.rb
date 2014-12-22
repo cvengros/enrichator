@@ -7,7 +7,6 @@ p = GoodData::Bricks::Pipeline.prepare([
   LoggerMiddleware,
   BenchMiddleware,
   S3DownloadMiddleware,
-  ADSCreateTablesMiddleware,
   ADSLoadDataMiddleware,
   ExecuteBrick
 ])
